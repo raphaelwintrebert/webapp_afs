@@ -228,12 +228,42 @@
 
 
   <script>
-    // --------------------------------------------------------
-    // REMPLACE CETTE URL PAR L'URL DE TON DÉPLOIEMENT APPS SCRIPT
-    // --------------------------------------------------------
+    // URL de déploiement Apps Script
     const APP_URL = "https://script.google.com/macros/s/AKfycbysT92ypp45jKzpyUT7w6tbDaNySDEQSOSNBaBh74Jtl16FnZoDdtHAHukhDUmz85opwA/exec";
 
-    async function envoyer() {
+    // Compteur unique pour les callbacks JSONP
+    let callbackId = 0;
+
+    // --------------------------------------------------
+    // APPEL JSONP — contourne le blocage CORS
+    // Apps Script répond en GET avec un callback JSONP
+    // --------------------------------------------------
+    function appelerJSONP(params, callback) {
+      const cbName   = "_cb_" + (++callbackId);
+      window[cbName] = function(data) {
+        delete window[cbName];
+        document.body.removeChild(script);
+        callback(data);
+      };
+
+      const queryString = Object.entries(Object.assign({ callback: cbName }, params))
+        .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+        .join("&");
+
+      const script   = document.createElement("script");
+      script.src     = APP_URL + "?" + queryString;
+      script.onerror = function() {
+        delete window[cbName];
+        document.body.removeChild(script);
+        callback({ succes: false, erreur: "connexion" });
+      };
+      document.body.appendChild(script);
+    }
+
+    // --------------------------------------------------
+    // ENVOI DU FORMULAIRE
+    // --------------------------------------------------
+    function envoyer() {
       const email = document.getElementById("email").value.trim();
       const btn   = document.getElementById("btn-envoyer");
 
@@ -242,35 +272,26 @@
         return;
       }
 
-      // Désactive le bouton pendant l'envoi
       btn.disabled    = true;
       btn.textContent = "Envoi en cours...";
 
-      try {
-        const response = await fetch(APP_URL, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ action: "renvoyerLienPublic", email: email })
-        });
-
-        const resultat = await response.json();
-
-        if (resultat.succes) {
-          // Masque le formulaire et affiche le message de succès
-          document.getElementById("formulaire").style.display = "none";
-          document.getElementById("message-succes").style.display = "block";
-        } else {
-          // Affiche le pop-up email introuvable
-          document.getElementById("overlay-erreur").classList.add("visible");
-          btn.disabled    = false;
-          btn.textContent = "Recevoir mon lien d'accès";
+      appelerJSONP(
+        { action: "renvoyerLienPublic", email: email },
+        function(resultat) {
+          if (resultat && resultat.succes) {
+            document.getElementById("formulaire").style.display = "none";
+            document.getElementById("message-succes").style.display = "block";
+          } else if (resultat && resultat.erreur === "connexion") {
+            alert("Erreur de connexion. Veuillez réessayer dans quelques instants.");
+            btn.disabled    = false;
+            btn.textContent = "Recevoir mon lien d'accès";
+          } else {
+            document.getElementById("overlay-erreur").classList.add("visible");
+            btn.disabled    = false;
+            btn.textContent = "Recevoir mon lien d'accès";
+          }
         }
-
-      } catch(err) {
-        alert("Erreur de connexion. Veuillez réessayer dans quelques instants.");
-        btn.disabled    = false;
-        btn.textContent = "Recevoir mon lien d'accès";
-      }
+      );
     }
 
     function fermerPopup() {
@@ -278,7 +299,6 @@
       document.getElementById("email").focus();
     }
 
-    // Permet de soumettre avec la touche Entrée
     document.getElementById("email").addEventListener("keydown", function(e) {
       if (e.key === "Enter") envoyer();
     });
