@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accès au Portail AFS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lato', sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .carte {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+      border-top: 5px solid #007AC2;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #007AC2;
+      margin-top: 8px;
+    }
+
+    .logo p {
+      font-size: 14px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    .hint {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    input[type="email"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: 'Lato', sans-serif;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="email"]:focus {
+      outline: none;
+      border-color: #007AC2;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 13px;
+      margin-top: 16px;
+      background: #007AC2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Lato', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button[type="submit"]:hover { opacity: 0.85; }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Message succès */
+    .message-succes {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      background: #d4edda;
+      border-radius: 8px;
+      color: #155724;
+      margin-top: 16px;
+    }
+
+    .message-succes .icone { font-size: 32px; margin-bottom: 8px; }
+    .message-succes p { font-size: 14px; line-height: 1.6; }
+
+    /* Pop-up email introuvable */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .overlay.visible { display: flex; }
+
+    .popup {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    .popup .icone-alerte {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .popup h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .popup p {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .popup a {
+      color: #007AC2;
+      font-weight: 700;
+    }
+
+    .popup button {
+      padding: 10px 24px;
+      background: #007AC2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Lato', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .popup button:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+  <!-- FORMULAIRE PRINCIPAL -->
+  <div class="carte">
+    <div class="logo">
+      <h1>Portail AFS</h1>
+      <p>Accès bénévoles</p>
+    </div>
+
+    <div id="formulaire">
+      <label for="email">Adresse email</label>
+      <p class="hint">
+        Indiquez votre email de bénévolat AFS, tel qu'il est renseigné dans Global Link.
+      </p>
+      <input
+        type="email"
+        id="email"
+        placeholder="votre.email@exemple.fr"
+        autocomplete="email"
+      >
+      <button type="submit" id="btn-envoyer" onclick="envoyer()">
+        Recevoir mon lien d'accès
+      </button>
+    </div>
+
+    <!-- Message affiché après envoi réussi -->
+    <div class="message-succes" id="message-succes">
+      <div class="icone">✅</div>
+      <p>
+        <strong>Votre lien a été envoyé !</strong><br>
+        Vérifiez votre boîte mail (et vos spams si nécessaire).<br>
+        Le lien est valable indéfiniment.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- POP-UP EMAIL INTROUVABLE -->
+  <div class="overlay" id="overlay-erreur">
+    <div class="popup">
+      <div class="icone-alerte">⚠️</div>
+      <h2>Email non reconnu</h2>
+      <p>
+        Cet email n'est pas recensé dans notre base de bénévoles.<br><br>
+        <strong>Est-ce vraiment votre email pour AFS ?</strong><br>
+        N'hésitez pas à aller sur votre compte
+        <a href="https://afs.org" target="_blank">Global Link</a>
+        pour vérifier l'adresse email associée à votre profil,
+        ou à contacter les responsables de votre AA locale.
+      </p>
+      <button onclick="fermerPopup()">Réessayer</button>
+    </div>
+  </div>
+
+
+  <script>
+    // --------------------------------------------------------
+    // REMPLACE CETTE URL PAR L'URL DE TON DÉPLOIEMENT APPS SCRIPT
+    // --------------------------------------------------------
+    const APP_URL = "https://script.google.com/macros/s/AKfycbysT92ypp45jKzpyUT7w6tbDaNySDEQSOSNBaBh74Jtl16FnZoDdtHAHukhDUmz85opwA/exec";
+
+    async function envoyer() {
+      const email = document.getElementById("email").value.trim();
+      const btn   = document.getElementById("btn-envoyer");
+
+      if (!email) {
+        document.getElementById("email").focus();
+        return;
+      }
+
+      // Désactive le bouton pendant l'envoi
+      btn.disabled    = true;
+      btn.textContent = "Envoi en cours...";
+
+      try {
+        const response = await fetch(APP_URL, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ action: "renvoyerLienPublic", email: email })
+        });
+
+        const resultat = await response.json();
+
+        if (resultat.succes) {
+          // Masque le formulaire et affiche le message de succès
+          document.getElementById("formulaire").style.display = "none";
+          document.getElementById("message-succes").style.display = "block";
+        } else {
+          // Affiche le pop-up email introuvable
+          document.getElementById("overlay-erreur").classList.add("visible");
+          btn.disabled    = false;
+          btn.textContent = "Recevoir mon lien d'accès";
+        }
+
+      } catch(err) {
+        alert("Erreur de connexion. Veuillez réessayer dans quelques instants.");
+        btn.disabled    = false;
+        btn.textContent = "Recevoir mon lien d'accès";
+      }
+    }
+
+    function fermerPopup() {
+      document.getElementById("overlay-erreur").classList.remove("visible");
+      document.getElementById("email").focus();
+    }
+
+    // Permet de soumettre avec la touche Entrée
+    document.getElementById("email").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") envoyer();
+    });
+  </script>
+
+</body>
+</html>
